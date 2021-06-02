@@ -20,6 +20,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+
 	apis "github.com/integr8ly/grafana-operator/api"
 	"github.com/integr8ly/grafana-operator/controllers/common"
 	grafanaconfig "github.com/integr8ly/grafana-operator/controllers/config"
@@ -32,12 +36,10 @@ import (
 	"github.com/operator-framework/operator-lib/leader"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"os"
-	"runtime"
 	k8sconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"strings"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
