@@ -203,6 +203,75 @@ func SetupWithManager(mgr ctrl.Manager, r reconcile.Reconciler, namespace string
 		Complete(r)
 }
 
+// Returns the hash of a dashboard if it is known
+func findHash(item *grafanav1alpha1.GrafanaDashboard, knownDashboards []*integreatlyorgv1alpha1.GrafanaDashboardRef) string {
+	for _, d := range knownDashboards {
+		if item.Name == d.Name && item.Namespace == d.Namespace {
+			return d.Hash
+		}
+	}
+	return ""
+}
+
+func (r *GrafanaDashboardReconciler) newUpdatedDashboards(request reconcile.Request, grafanaClient GrafanaClient, dashboard integreatlyorgv1alpha1.GrafanaDashboard, knownHash string) {
+	// Is this a dashboard we care about (matches the label selectors)?
+	if !r.isMatch(&dashboard) {
+		log.Log.Info("dashboard found but selectors do not match",
+			"namespace", dashboard.Namespace, "name", dashboard.Name)
+	}
+
+	folderName := dashboard.Namespace
+	if dashboard.Spec.CustomFolderName != "" {
+		folderName = dashboard.Spec.CustomFolderName
+	}
+
+	folder, err := grafanaClient.CreateOrUpdateFolder(folderName)
+
+	if err != nil {
+		log.Log.Error(err, "failed to get or create namespace folder for dashboard", "folder", folderName, "dashboard", request.Name)
+		r.manageError(&dashboard, err)
+	}
+
+	var folderId int64
+	if folder.ID == nil {
+		folderId = 0
+	} else {
+		folderId = *folder.ID
+	}
+
+	pipeline := NewDashboardPipeline(r.Client, &dashboard, r.context)
+	processed, err := pipeline.ProcessDashboard(knownHash, &folderId, folderName)
+
+	if err != nil {
+		log.Log.Error(err, "cannot process dashboard", "namespace", dashboard.Namespace, "name", dashboard.Name)
+		r.manageError(&dashboard, err)
+	}
+
+	if processed == nil {
+		r.config.SetPluginsFor(&dashboard)
+	}
+	// Check labels only when DashboardNamespaceSelector isnt empty
+	if r.state.DashboardNamespaceSelector != nil {
+		matchesNamespaceLabels, err := r.checkNamespaceLabels(&dashboard)
+		if err != nil {
+			r.manageError(&dashboard, err)
+		}
+
+		if !matchesNamespaceLabels {
+			log.Log.Info("dashboard %v skipped because the namespace labels do not match", "dashboard", dashboard.Name)
+		}
+	}
+
+	_, err = grafanaClient.CreateOrUpdateDashboard(processed, folderId, folderName)
+	if err != nil {
+		//log.Log.Error(err, "cannot submit dashboard %v/%v", "namespace", dashboard.Namespace, "name", dashboard.Name)
+		r.manageError(&dashboard, err)
+
+	}
+
+	r.manageSuccess(&dashboard, &folderId, folderName)
+}
+
 var _ reconcile.Reconciler = &GrafanaDashboardReconciler{}
 
 func (r *GrafanaDashboardReconciler) reconcileDashboards(request reconcile.Request, grafanaClient GrafanaClient) (reconcile.Result, error) {
@@ -233,16 +302,6 @@ func (r *GrafanaDashboardReconciler) reconcileDashboards(request reconcile.Reque
 		return false
 	}
 
-	// Returns the hash of a dashboard if it is known
-	findHash := func(item *grafanav1alpha1.GrafanaDashboard) string {
-		for _, d := range knownDashboards {
-			if item.Name == d.Name && item.Namespace == d.Namespace {
-				return d.Hash
-			}
-		}
-		return ""
-	}
-
 	// Dashboards to delete: dashboards that are known but not found
 	// any longer in the namespace
 	for _, dashboard := range knownDashboards {
@@ -253,73 +312,11 @@ func (r *GrafanaDashboardReconciler) reconcileDashboards(request reconcile.Reque
 
 	// Process new/updated dashboards
 	for _, dashboard := range namespaceDashboards.Items {
-		// Is this a dashboard we care about (matches the label selectors)?
-		if !r.isMatch(&dashboard) {
-			log.Log.Info("dashboard found but selectors do not match",
-				"namespace", dashboard.Namespace, "name", dashboard.Name)
-			continue
-		}
-
-		folderName := dashboard.Namespace
-		if dashboard.Spec.CustomFolderName != "" {
-			folderName = dashboard.Spec.CustomFolderName
-		}
-
-		folder, err := grafanaClient.CreateOrUpdateFolder(folderName)
-
-		if err != nil {
-			log.Log.Error(err, "failed to get or create namespace folder for dashboard", "folder", folderName, "dashboard", request.Name)
-			r.manageError(&dashboard, err)
-			continue
-		}
-
-		var folderId int64
-		if folder.ID == nil {
-			folderId = 0
-		} else {
-			folderId = *folder.ID
-		}
-
 		// Process the dashboard. Use the known hash of an existing dashboard
 		// to determine if an update is required
-		knownHash := findHash(&dashboard)
+		knownHash := findHash(&dashboard, knownDashboards)
 
-		pipeline := NewDashboardPipeline(r.Client, &dashboard, r.context)
-		processed, err := pipeline.ProcessDashboard(knownHash, &folderId, folderName)
-
-		if err != nil {
-			log.Log.Error(err, "cannot process dashboard", "namespace", dashboard.Namespace, "name", dashboard.Name)
-			r.manageError(&dashboard, err)
-			continue
-		}
-
-		if processed == nil {
-			r.config.SetPluginsFor(&dashboard)
-			continue
-		}
-		// Check labels only when DashboardNamespaceSelector isnt empty
-		if r.state.DashboardNamespaceSelector != nil {
-			matchesNamespaceLabels, err := r.checkNamespaceLabels(&dashboard)
-			if err != nil {
-				r.manageError(&dashboard, err)
-				continue
-			}
-
-			if !matchesNamespaceLabels {
-				log.Log.Info("dashboard %v skipped because the namespace labels do not match", "dashboard", dashboard.Name)
-				continue
-			}
-		}
-
-		_, err = grafanaClient.CreateOrUpdateDashboard(processed, folderId, folderName)
-		if err != nil {
-			//log.Log.Error(err, "cannot submit dashboard %v/%v", "namespace", dashboard.Namespace, "name", dashboard.Name)
-			r.manageError(&dashboard, err)
-
-			continue
-		}
-
-		r.manageSuccess(&dashboard, &folderId, folderName)
+		r.newUpdatedDashboards(request, grafanaClient, dashboard, knownHash)
 	}
 
 	for _, dashboard := range dashboardsToDelete {
