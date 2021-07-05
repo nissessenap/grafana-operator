@@ -16,69 +16,121 @@ limitations under the License.
 
 package controllers
 
-//
-//import (
-//	"path/filepath"
-//	"testing"
-//
-//	"k8s.io/client-go/kubernetes/scheme"
-//	"k8s.io/client-go/rest"
-//	"sigs.k8s.io/controller-runtime/pkg/client"
-//	"sigs.k8s.io/controller-runtime/pkg/envtest"
-//	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
-//	logf "sigs.k8s.io/controller-runtime/pkg/log"
-//	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-//
-//	integreatlyorgv1alpha1 "github.com/integr8ly/grafana-operator/api/integreatly/v1alpha1"
-//	// +kubebuilder:scaffold:imports
-//)
-//
-//// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-//// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
-//
-//var cfg *rest.Config
-//var k8sClient client.Client
-//var testEnv *envtest.Environment
-//
-//func TestAPIs(t *testing.T) {
-//	RegisterFailHandler(Fail)
-//
-//	RunSpecsWithDefaultAndCustomReporters(t,
-//		"Controller Suite",
-//		[]Reporter{printer.NewlineReporter{}})
-//}
-//
-//var _ = BeforeSuite(func() {
-//	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-//
-//	By("bootstrapping test environment")
-//	testEnv = &envtest.Environment{
-//		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
-//	}
-//
-//	cfg, err := testEnv.Start()
-//	Expect(err).NotTo(HaveOccurred())
-//	Expect(cfg).NotTo(BeNil())
-//
-//	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
-//	Expect(err).NotTo(HaveOccurred())
-//
-//	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
-//	Expect(err).NotTo(HaveOccurred())
-//
-//	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
-//	Expect(err).NotTo(HaveOccurred())
-//
-//	// +kubebuilder:scaffold:scheme
-//
-//	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-//	Expect(err).NotTo(HaveOccurred())
-//	Expect(k8sClient).NotTo(BeNil())
-//
-//}, 60)
-//
-//var _ = AfterSuite(func() {
-//	By("tearing down the test environment")
-//	err := testEnv.Stop()
-//	Expect(err).NotTo(HaveOccurred())
-//})
+import (
+	"context"
+	"path/filepath"
+	"testing"
+
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	integreatlyorgv1alpha1 "github.com/integr8ly/grafana-operator/api/integreatly/v1alpha1"
+	grafanaconfig "github.com/integr8ly/grafana-operator/controllers/config"
+	"github.com/integr8ly/grafana-operator/controllers/grafana"
+	"github.com/integr8ly/grafana-operator/controllers/grafanadashboard"
+	"github.com/integr8ly/grafana-operator/controllers/grafanadatasource"
+	// +kubebuilder:scaffold:imports
+)
+
+// These tests use Ginkgo (BDD-style Go testing framework). Refer to
+// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
+
+var cfg *rest.Config
+var k8sClient client.Client
+var testEnv *envtest.Environment
+
+func TestAPIs(t *testing.T) {
+	RegisterFailHandler(Fail)
+
+	RunSpecsWithDefaultAndCustomReporters(t,
+		"Controller Suite",
+		[]Reporter{printer.NewlineReporter{}})
+}
+
+var _ = BeforeSuite(func() {
+	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+
+	By("bootstrapping test environment")
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		ErrorIfCRDPathMissing: true,
+	}
+
+	cfg, err := testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(cfg).NotTo(BeNil())
+
+	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	// +kubebuilder:scaffold:scheme
+
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
+
+	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	// setup Grafana reconciler
+	err = (&grafana.ReconcileGrafana{
+		Client:  k8sManager.GetClient(),
+		Scheme:  k8sManager.GetScheme(),
+		Log:     ctrl.Log.WithName("controllers").WithName("Grafana"),
+		Context: ctx,
+		Cancel:  cancel,
+		Config:  grafanaconfig.GetControllerConfig(),
+		Plugins: grafana.NewPluginsHelper(),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	// setup grafanadashboard reconciler
+	err = (&grafanadashboard.GrafanaDashboardReconciler{
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("GrafanaDashboard"),
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	// setup grafanadatasource reconciler
+	err = (&grafanadatasource.GrafanaDatasourceReconciler{
+		Client:  k8sManager.GetClient(),
+		Scheme:  k8sManager.GetScheme(),
+		Logger:  ctrl.Log.WithName("controllers").WithName("GrafanaDatasource"),
+		Context: ctx,
+		Cancel:  cancel,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	go func() {
+		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		Expect(err).ToNot(HaveOccurred())
+	}()
+
+}, 60)
+
+var _ = AfterSuite(func() {
+	By("tearing down the test environment")
+	err := testEnv.Stop()
+	Expect(err).NotTo(HaveOccurred())
+})
