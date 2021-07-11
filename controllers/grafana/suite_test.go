@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package grafana
 
 import (
 	"context"
@@ -35,9 +35,6 @@ import (
 
 	integreatlyorgv1alpha1 "github.com/integr8ly/grafana-operator/api/integreatly/v1alpha1"
 	grafanaconfig "github.com/integr8ly/grafana-operator/controllers/config"
-	"github.com/integr8ly/grafana-operator/controllers/grafana"
-	"github.com/integr8ly/grafana-operator/controllers/grafanadashboard"
-	"github.com/integr8ly/grafana-operator/controllers/grafanadatasource"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -45,7 +42,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var cfg *rest.Config
-var K8sClient client.Client
+var k8sClient client.Client
 var testEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
@@ -61,7 +58,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -72,17 +69,11 @@ var _ = BeforeSuite(func() {
 	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = integreatlyorgv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
 	// +kubebuilder:scaffold:scheme
 
-	K8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(K8sClient).NotTo(BeNil())
+	Expect(k8sClient).NotTo(BeNil())
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
@@ -93,32 +84,14 @@ var _ = BeforeSuite(func() {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// setup Grafana reconciler
-	err = (&grafana.ReconcileGrafana{
+	err = (&ReconcileGrafana{
 		Client:  k8sManager.GetClient(),
 		Scheme:  k8sManager.GetScheme(),
 		Log:     ctrl.Log.WithName("controllers").WithName("Grafana"),
 		Context: ctx,
 		Cancel:  cancel,
 		Config:  grafanaconfig.GetControllerConfig(),
-		Plugins: grafana.NewPluginsHelper(),
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	// setup grafanadashboard reconciler
-	err = (&grafanadashboard.GrafanaDashboardReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("GrafanaDashboard"),
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	// setup grafanadatasource reconciler
-	err = (&grafanadatasource.GrafanaDatasourceReconciler{
-		Client:  k8sManager.GetClient(),
-		Scheme:  k8sManager.GetScheme(),
-		Logger:  ctrl.Log.WithName("controllers").WithName("GrafanaDatasource"),
-		Context: ctx,
-		Cancel:  cancel,
+		Plugins: NewPluginsHelper(),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
