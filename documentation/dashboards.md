@@ -197,5 +197,3 @@ _Note_ : Deletion of unmanaged folders requires manual intervention.
 To move a dashboard between managed and unmanaged folders, simply remove or add the `CustomFolderName` field value from
 the dashboard spec, this will update the hash of the dashboard on the next reconcile loop, and re-add the dashboard to
 the desired folder.
-
-Something
