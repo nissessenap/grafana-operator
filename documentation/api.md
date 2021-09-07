@@ -25,7 +25,6 @@ Resource Types:
 
 
 
-
 GrafanaDashboard is the Schema for the grafanadashboards API
 
 <table>
