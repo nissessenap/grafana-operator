@@ -21,11 +21,9 @@ import (
 	"time"
 
 	integreatlyorgv1alpha1 "github.com/grafana-operator/grafana-operator/v4/api/integreatly/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -82,7 +80,7 @@ var _ = Describe("Grafana controller", func() {
 			Expect(k8sClient.Create(ctx, grafana)).Should(Succeed())
 
 			grafanaLookupKey := types.NamespacedName{Name: GrafanaName, Namespace: GrafanaNamespace}
-			//grafanaServiceLookupKey := types.NamespacedName{Name: GrafanaName, Namespace: GrafanaNamespace}
+			//grafanaServiceLookupKey := types.NamespacedName{Name: GrafanaServiceName, Namespace: GrafanaNamespace}
 			createdGrafana := &integreatlyorgv1alpha1.Grafana{}
 
 			// We'll need to retry getting this newly created CronJob, given that creation may not immediately happen.
@@ -95,6 +93,7 @@ var _ = Describe("Grafana controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			// Let's make sure our Schedule string value was properly converted/handled.
 			Expect(createdGrafana.ObjectMeta.Name).Should(Equal("test-grafana"))
+			Expect(createdGrafana).Should(Equal("grafana-service"))
 			//By("By checking the service that got created")
 
 			/*
@@ -117,19 +116,22 @@ var _ = Describe("Grafana controller", func() {
 
 			//createdService := &apiv1.Service{}
 			//podList := &corev1.PodList{}
-			createdService := &corev1.ServiceList{}
+			/*
+				createdService := &corev1.Service{}
+				//createdService := &corev1.ServiceList{}
 
-			Eventually(func() bool {
-				//err := k8sClient.Get(ctx, grafanaServiceLookupKey, createdService)
-				err := k8sClient.List(ctx, createdService, &client.ListOptions{})
+				fmt.Println("Pre get")
+				err := k8sClient.Get(ctx, grafanaServiceLookupKey, createdService)
+				fmt.Println("Post get")
+				//err := k8sClient.List(ctx, createdService, &client.ListOptions{})
 				if err != nil {
-					return false
+					fmt.Println(err)
 				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-			// Let's make sure our Schedule string value was properly converted/handled.
-			Expect(createdService.Items).Should(Equal(GrafanaServiceName))
-
+				// Let's make sure our Schedule string value was properly converted/handled.
+				fmt.Println("Pre-expect")
+				Expect(createdService.ObjectMeta.Name).Should(Equal(GrafanaServiceName))
+				fmt.Println("post-expect")
+			*/
 		})
 	})
 })
