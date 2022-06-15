@@ -1,12 +1,18 @@
 package grafanadashboard
 
 import (
+	"context"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	grafanav1alpha1 "github.com/grafana-operator/grafana-operator/v4/api/integreatly/v1alpha1"
+	"github.com/grafana-operator/grafana-operator/v4/controllers/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var dashboard = &grafanav1alpha1.GrafanaDashboard{
@@ -99,4 +105,39 @@ func TestFindUidEmpty(t *testing.T) {
 func TestFindUid(t *testing.T) {
 	output := findUid(knownDashboards, dashboard)
 	require.Equal(t, output, "uid5678")
+}
+
+func TestReconcile(t *testing.T) {
+	client := model.NewClient()
+
+	request := reconcile.Request{
+		types.NamespacedName{
+			Namespace: "grafana",
+			Name:      "dashboard2",
+		},
+	}
+
+	// setup expectations
+	client.On("Update",
+		mock.IsType(context.Background()),
+		mock.IsType(&grafanav1alpha1.GrafanaDashboard{}),
+		mock.Anything,
+	).Return(nil)
+	ctx := context.Background()
+	reconciler := &GrafanaDashboardReconciler{
+		Client:  client,
+		Scheme:  newTestScheme(),
+		context: ctx,
+	}
+	grafanaClient, err := reconciler.getClient()
+	require.NoError(t, err)
+	_, err = reconciler.reconcileDashboards(request, grafanaClient)
+	require.NoError(t, err)
+	client.AssertExpectations(t)
+
+}
+
+func newTestScheme() *runtime.Scheme {
+	testScheme := runtime.NewScheme()
+	return testScheme
 }
