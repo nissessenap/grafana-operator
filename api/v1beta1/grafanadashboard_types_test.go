@@ -11,6 +11,7 @@ import (
 func TestGrafanaDashboardStatus_getContentCache(t *testing.T) {
 	timestamp := metav1.Time{Time: time.Now().Add(-1 * time.Hour)}
 	infinite := 0 * time.Second
+
 	dashboardJSON := []byte(`{"dummyField": "dummyData"}`)
 
 	cachedDashboard, err := Gzip(dashboardJSON)
