@@ -34,6 +34,7 @@ jobs:
         run: |
           echo "One or more files has changed."
           echo "List all the files that have changed: ${{ steps.changed-files.outputs.all_changed_files }}"
+          echo "What is any changed ${{ steps.changed-files.outputs.any_changed }}"
       - id: docs_only_check
         if: steps.changed-files.outputs.any_changed != 'true'
         name: Check for docs-only changes
