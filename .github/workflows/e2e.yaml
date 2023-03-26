@@ -35,7 +35,7 @@ jobs:
           echo "One or more files has changed."
           echo "List all the files that have changed: ${{ steps.changed-files.outputs.all_changed_files }}"
       - id: docs_only_check
-        if: steps.files.outputs.any_changed != 'true'
+        if: steps.changed-files.outputs.any_changed != 'true'
         name: Check for docs-only changes
         run: echo "docs_only=true" >> $GITHUB_OUTPUT
 
