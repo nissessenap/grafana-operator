@@ -31,6 +31,8 @@ jobs:
   kustomize:
     runs-on: ubuntu-latest
     steps:
+      - name: install flux
+        uses: fluxcd/flux2/action@main
       - name: Clone repo
         uses: actions/checkout@v3
 
