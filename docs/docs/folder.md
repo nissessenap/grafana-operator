@@ -10,3 +10,5 @@ In a standard scenario, a folder with default settings gets created through a `G
 If you need more control over folders (such as RBAC settings), it can be achieved through a `GrafanaFolder` CR.
 
 To view all configuration you can do within folders, look at our [API documentation](../api/#grafanafolderspec).
+contentCacheDuration
+asgakgsagmgl
