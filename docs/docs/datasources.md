@@ -10,6 +10,7 @@ To view all configuration you can do within datasources look at our [API documen
 ## Secret management
 
 In case a datasource requires authentication, it is advised not to include credentials directly in `url`. Instead, it's better to rely on value substitution like in the example below.
+hlhda
 
 ```yaml
 kind: Secret
