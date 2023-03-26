@@ -11,4 +11,3 @@ If you need more control over folders (such as RBAC settings), it can be achieve
 
 To view all configuration you can do within folders, look at our [API documentation](../api/#grafanafolderspec).
 contentCacheDuration
-asgakgsagmgl
