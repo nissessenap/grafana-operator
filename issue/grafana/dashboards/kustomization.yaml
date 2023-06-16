@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - mimir-alertmanager-resource.yaml
+  - mimir-alertmanager.yaml
+  - mimir-compactor-resource.yaml
+  - mimir-compactor.yaml
+  - mimir-config.yaml
+  - mimir-object-store.yaml
+  - mimir-override.yaml
+  - mimir-overview-networking.yaml
+  - mimir-overview-resource.yaml
+  - mimir-overview.yaml
+  - mimir-querie.yaml
+  - mimir-read.yaml
+  - mimir-reads-networking.yaml
+  - mimir-reads-resource.yaml
+  - mimir-remote-ruler-read.yaml
+  - mimir-remote-ruler-reads-resource.yaml
+  - mimir-rollout-progre.yaml
+  - mimir-ruler.yaml
+  - mimir-scaling.yaml
+  - mimir-slow-querie.yaml
+  - mimir-tenant.yaml
+  - mimir-top-tenant.yaml
+  - mimir-write.yaml
+  - mimir-writes-networking.yaml
+  - mimir-writes-resource.yaml

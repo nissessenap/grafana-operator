@@ -1,0 +1,20 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  labels:
+    dashboards: "grafana"
+spec:
+  config:
+    log:
+      mode: "console"
+    server:
+      enable_gzip: "true"
+    auth:
+      disable_login_form: "false"
+    alerting:
+      enable: "false"
+  serviceAccount:
+    metadata:
+      annotations:
+        iam.gke.io/gcp-service-account: hello

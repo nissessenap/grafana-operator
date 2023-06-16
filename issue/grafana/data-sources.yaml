@@ -1,0 +1,77 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: mimir-staging
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: mimir-staging
+    type: prometheus
+    access: proxy
+    url: http://mimir-query-frontend.mimir.svc.cluster.local:8080/prometheus
+    isDefault: false
+    jsonData:
+      httpHeaderName1: "X-Scope-OrgID"
+    secureJsonData:
+      httpHeaderValue1: "staging"
+    editable: false
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: mimir-prod
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: mimir-prod
+    type: prometheus
+    access: proxy
+    url: http://mimir-query-frontend.mimir.svc.cluster.local:8080/prometheus
+    isDefault: false
+    jsonData:
+      httpHeaderName1: "X-Scope-OrgID"
+    secureJsonData:
+      httpHeaderValue1: "prod"
+    editable: false
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: mimir-o11y
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: mimir-o11y
+    type: prometheus
+    access: proxy
+    url: http://mimir-query-frontend.mimir.svc.cluster.local:8080/prometheus
+    isDefault: false
+    jsonData:
+      httpHeaderName1: "X-Scope-OrgID"
+    secureJsonData:
+      httpHeaderValue1: "o11y"
+    editable: false
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: gcp-o11y
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: gcp-o11y
+    type: stackdriver
+    access: proxy
+    basicAuth: false
+    isDefault: false
+    jsonData:
+      authenticationType: gce
+    editable: true
