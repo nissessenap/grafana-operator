@@ -65,6 +65,10 @@ jobs:
 
   image:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     steps:
       - name: Clone repo
         uses: actions/checkout@v4
@@ -92,6 +96,11 @@ jobs:
         with:
           version: v0.14.1
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.2.0
+        with:
+          cosign-release: "v2.2.1"
+
       - name: Prepare
         run: |
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
@@ -105,7 +114,7 @@ jobs:
           for i in "${arr[@]}"
           do
             export KO_DOCKER_REPO=${i}/${{ env.GHCR_REPO }}/grafana-operator
-            ko build --sbom=cyclonedx --bare --platform linux/arm64,linux/arm/v7,linux/amd64 -t ${{ github.ref_name }} \
+            ko build --sbom=cyclonedx --image-refs ./image-digest --bare --platform linux/arm64,linux/arm/v7,linux/amd64 -t ${{ github.ref_name }} \
             --image-label org.opencontainers.image.title=grafana-operator \
             --image-label org.opencontainers.image.description="An operator for Grafana that installs and manages Grafana instances & Dashboards & Datasources through Kubernetes/OpenShift CRs" \
             --image-label org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }} \
@@ -113,3 +122,6 @@ jobs:
             --image-label org.opencontainers.image.version=${{ github.ref_name }} \
             --image-label org.opencontainers.image.created=${{ env.BUILD_DATE }}
           done
+      - name: Sign Image
+        run: |
+          cosign sign -y $(cat ./image-digest)
