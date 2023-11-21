@@ -124,4 +124,4 @@ jobs:
           done
       - name: Sign Image
         run: |
-          cosign sign -y $(cat ./image-digest)
+          cosign sign -d -y $(cat ./image-digest)
