@@ -16,7 +16,7 @@ jobs:
 
       - name: Sign Image
         run: |
-          for i in "${${{ env.REPOS }}[@]}"
+          for i in ${{ env.REPOS }}
           do
             echo "crap-${i}"
           done
