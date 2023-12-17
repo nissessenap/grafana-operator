@@ -12,11 +12,11 @@ jobs:
       - name: Prepare
         run: |
           echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
-          echo "REPOS"=("quay.io/grafana-operator/grafana-operator" "ghcr.io/${{ github.repository }}") >> $GITHUB_ENV
+          echo "REPOS"="quay.io/grafana-operator/grafana-operator" "ghcr.io/${{ github.repository }}" >> $GITHUB_ENV
 
       - name: Sign Image
         run: |
           for i in "${${{ env.REPOS }}[@]}"
           do
-            echo ${i}
+            echo "crap-${i}"
           done
