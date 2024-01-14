@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   helm:
@@ -45,6 +46,7 @@ jobs:
           GHCR_REPO=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "KUSTOMIZE_REPO=$KUSTOMIZE_REPO" >> $GITHUB_ENV
           echo "GHCR_REPO=$GHCR_REPO" >> $GITHUB_ENV
+
       - name: update-kustomize-image
         run: |
           # Install kustomize
@@ -52,6 +54,15 @@ jobs:
           # Update image to match the new image and tag
           cd deploy/kustomize/base
           kustomize edit set image ghcr.io/${{ github.repository }}=${{ env.GHCR_REPO }}:${{ github.ref_name }}
+      - name: update-kustomize-assert
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for d in deploy/kustomize/overlays/*/ ; do
+               kustomize build "$d" > kustomize-$(basename "$d").yaml
+          done
+          gh release upload "${{ github.ref_name }}" kustomize-*.yaml deploy/kustomize/base/crds.yaml
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -64,14 +75,6 @@ jobs:
             --path="./deploy/kustomize" \
             --source="${{ github.event.repository.html_url }}" \
             --revision="${GITHUB_REF_NAME}/${GITHUB_SHA}"
-      - name: update-kustomize-assert
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for d in deploy/kustomize/overlays/*/ ; do
-               kustomize build "$d" > kustomize-$(basename "$d").yaml
-          done
-          gh release upload "${{ github.ref_name }}" kustomize-*.yaml deploy/kustomize/base/crds.yaml
 
   image:
     runs-on: ubuntu-latest
