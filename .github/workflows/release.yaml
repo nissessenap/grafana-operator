@@ -59,14 +59,12 @@ jobs:
             --image-label org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }} \
             --image-label org.opencontainers.image.revision=${{ github.sha }} \
             --image-label org.opencontainers.image.version=${IMAGE_VERSION} \
-            --image-label org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-            github.com/grafana/grafana-operator/v5
+            --image-label org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" 
           echo "IMAGE_DIGEST=$(cat ./image-digest | cut -d@ -f2)" >> $GITHUB_OUTPUT
           
           # Generate SBOM separately without publishing
           mkdir -p ./sboms
-          ko build --sbom=spdx --sbom-dir ./sboms --local --platform linux/amd64 \
-            github.com/grafana/grafana-operator/v5
+          ko build --sbom=spdx --sbom-dir ./sboms --local --platform linux/amd64 
           
           # Find the SBOM file for the main image
           SBOM_FILE=$(find ./sboms -name "*.spdx.json" | head -n1)
