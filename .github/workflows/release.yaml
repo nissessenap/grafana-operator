@@ -193,7 +193,7 @@ jobs:
           IMAGE_VERSION: ${{ github.ref_name }}
           KO_DOCKER_REPO: "ghcr.io/${{ github.repository }}"
         run: |
-          ko build --sbom=spdx --image-refs ./image-digest --bare --platform linux/arm64,linux/arm/v7,linux/amd64,linux/ppc64le -t ${IMAGE_VERSION} \
+          ko build --sbom=spdx --sbom-dir ./sboms --image-refs ./image-digest --bare --platform linux/arm64,linux/arm/v7,linux/amd64,linux/ppc64le -t ${IMAGE_VERSION} \
             --image-label org.opencontainers.image.title=grafana-operator \
             --image-label org.opencontainers.image.description="An operator for Grafana that installs and manages Grafana instances & Dashboards & Datasources through Kubernetes/OpenShift CRs" \
             --image-label org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }} \
@@ -201,13 +201,29 @@ jobs:
             --image-label org.opencontainers.image.version=${IMAGE_VERSION} \
             --image-label org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           echo "IMAGE_DIGEST=$(cat ./image-digest | cut -d@ -f2)" >> $GITHUB_OUTPUT
-      - name: Attest
+          
+          # Find the SBOM file for the main image (ko generates one per platform)
+          SBOM_FILE=$(find ./sboms -name "*.spdx.json" | head -n1)
+          if [ -f "$SBOM_FILE" ]; then
+            echo "SBOM_PATH=$SBOM_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "Warning: No SBOM file found"
+            ls -la ./sboms/
+          fi
+      - name: Attest build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         id: attest
         with:
           subject-name: "ghcr.io/${{ github.repository }}"
           subject-digest: ${{ steps.publish-image.outputs.IMAGE_DIGEST }}
           push-to-registry: true
+
+      - name: Sign and attach SBOM
+        if: steps.publish-image.outputs.SBOM_PATH
+        env:
+          IMAGE_URI: "ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.IMAGE_DIGEST }}"
+        run: |
+          cosign attest --yes --predicate ${{ steps.publish-image.outputs.SBOM_PATH }} --type spdxjson "${IMAGE_URI}"
 
   distribute-to-quay:
     runs-on: ubuntu-latest
