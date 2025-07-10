@@ -50,7 +50,7 @@ jobs:
         id: publish-image
         env:
           IMAGE_VERSION: ${{ github.ref_name }}
-          KO_DOCKER_REPO: "ghcr.io/${{ github.repository }}"
+          KO_DOCKER_REPO: "ghcr.io/nissessenap/grafana-operator"
         run: |
           ko build --sbom=spdx --sbom-dir ./sboms --image-refs ./image-digest --bare --platform linux/arm64,linux/arm/v7,linux/amd64,linux/ppc64le -t ${IMAGE_VERSION} \
             --image-label org.opencontainers.image.title=grafana-operator \
