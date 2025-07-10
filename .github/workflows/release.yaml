@@ -73,13 +73,13 @@ jobs:
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         id: attest
         with:
-          subject-name: "ghcr.io/${{ github.repository }}"
+          subject-name: "ghcr.io/nissessenap/grafana-operator"
           subject-digest: ${{ steps.publish-image.outputs.IMAGE_DIGEST }}
           push-to-registry: true
 
       - name: Sign and attach SBOM
         if: steps.publish-image.outputs.SBOM_PATH
         env:
-          IMAGE_URI: "ghcr.io/${{ github.repository }}@${{ steps.publish-image.outputs.IMAGE_DIGEST }}"
+          IMAGE_URI: "ghcr.io/nissessenap/grafana-operator@${{ steps.publish-image.outputs.IMAGE_DIGEST }}"
         run: |
           cosign attest --yes --predicate ${{ steps.publish-image.outputs.SBOM_PATH }} --type spdxjson "${IMAGE_URI}"
