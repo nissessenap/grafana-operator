@@ -52,19 +52,27 @@ jobs:
           IMAGE_VERSION: ${{ github.ref_name }}
           KO_DOCKER_REPO: "ghcr.io/nissessenap/grafana-operator"
         run: |
-          ko build --sbom=spdx --sbom-dir ./sboms --image-refs ./image-digest --bare --platform linux/amd64 -t ${IMAGE_VERSION} \
+          # Build without SBOM first to avoid permission issues
+          ko build --sbom=none --image-refs ./image-digest --bare --platform linux/amd64 -t ${IMAGE_VERSION} \
             --image-label org.opencontainers.image.title=grafana-operator \
             --image-label org.opencontainers.image.description="An operator for Grafana that installs and manages Grafana instances & Dashboards & Datasources through Kubernetes/OpenShift CRs" \
             --image-label org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }} \
             --image-label org.opencontainers.image.revision=${{ github.sha }} \
             --image-label org.opencontainers.image.version=${IMAGE_VERSION} \
-            --image-label org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            --image-label org.opencontainers.image.created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            github.com/grafana/grafana-operator/v5
           echo "IMAGE_DIGEST=$(cat ./image-digest | cut -d@ -f2)" >> $GITHUB_OUTPUT
           
-          # Find the SBOM file for the main image (ko generates one per platform)
+          # Generate SBOM separately without publishing
+          mkdir -p ./sboms
+          ko build --sbom=spdx --sbom-dir ./sboms --local --platform linux/amd64 \
+            github.com/grafana/grafana-operator/v5
+          
+          # Find the SBOM file for the main image
           SBOM_FILE=$(find ./sboms -name "*.spdx.json" | head -n1)
           if [ -f "$SBOM_FILE" ]; then
             echo "SBOM_PATH=$SBOM_FILE" >> $GITHUB_OUTPUT
+            echo "Found SBOM: $SBOM_FILE"
           else
             echo "Warning: No SBOM file found"
             ls -la ./sboms/
